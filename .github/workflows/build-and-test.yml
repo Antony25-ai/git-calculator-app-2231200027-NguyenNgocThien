@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build, Test, and Release
 on:
   push:
     branches: [ "main" ]
@@ -7,22 +7,43 @@ on:
 
 jobs:
   test:
-    
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
+
+  build:
+    # This job will only run if the 'test' job succeeds
+    needs: test 
+    strategy:
+      matrix:
+        # Define the OSes to build
+        os: [ubuntu-latest, windows-latest, macos-latest] 
+    
+    # Use the OS from the matrix
+    runs-on: ${{ matrix.os }} 
+    
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
       
       - name: Install dependencies
         run: npm install
       
-      - name: Lint
-        run: npm run lint
+      - name: Build application
+        run: npm run build
       
-      - name: Run unit tests
-        run: npm test
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Name the artifact based on the OS
+          name: calculator-${{ matrix.os }} 
+          # The folder where the build output is stored
+          path: dist/
